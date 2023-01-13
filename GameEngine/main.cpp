@@ -284,6 +284,7 @@ int main()
 			}
 			if (!lr){
 				ufoPos.x += 0.4;
+				if (ufoPos.x > 2500.0f)
 					lr = true;
 			}
 			//water
@@ -351,9 +352,6 @@ void processKeyboardInput()
 	if (window.isPressed(GLFW_KEY_DOWN)){
 		camera.rotateOx(-cameraSpeed);
 		camera.keyboardMoveDown(cameraSpeed);
-	}
-	if (window.isPressed(GLFW_KEY_V)) {
-		std::cout << ufoPos.x << std::endl;
 	}
 	}
 
