@@ -4,21 +4,49 @@
 #include "Model Loading\mesh.h"
 #include "Model Loading\texture.h"
 #include "Model Loading\meshLoaderObj.h"
+#include <string>
+#include <iostream>
+
 
 void processKeyboardInput ();
+void nextLevel();
 
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
+float distance_ship;
+float distance_pkaxe;
+float distance_rock;
+float distance_bucket;
+float distance_fuel;
+
+int counter = 0;
+int taskNum = 0;
+
 bool cutscene = true;
-bool c = false;
-bool lr = true;
+bool ufo_lr = true;
+bool isPickaxe = true;
+bool isPickaxe2 = false;
+bool isRock = true;
+bool isBucket = false;
+bool isFuel = true;
+bool isShipFix = false;
+bool refill = false;
+bool fly_home = false;
+bool endscene = false;
+bool level = false;
+
 Window window("Game Engine", 800, 800);
 Camera camera;
 glm::vec3 lightColor = glm::vec3(1.0f);
 glm::vec3 lightPos = glm::vec3(-1800.0f, 1000.0f, -100.0f);
 glm::vec3 shipPos = glm::vec3(camera.getCameraPosition().x, camera.getCameraPosition().y - 60, camera.getCameraPosition().z - 100);
+glm::vec3 shipPos2 = glm::vec3(0.0f, -15.0f, -15.0f);
 glm::vec3 astPos = glm::vec3(-1805.0f, 200.0f, -3000.0f);
 glm::vec3 ufoPos = glm::vec3(-500.0f, 3000.0f, 6000.0f);
+glm::vec3 pickPos = glm::vec3(-20.0f, -25.0f, 50.0f);
+glm::vec3 rockPos = glm::vec3(-500.0f, -85.0f, 1100.0f);
+glm::vec3 bucketPos;
+glm::vec3 fuelPos;
 
 int main()
 {
@@ -39,6 +67,9 @@ int main()
 	GLuint tex6 = loadBMP("Resources/Textures/water.bmp");
 	GLuint tex7 = loadBMP("Resources/Textures/sand2.bmp");
 	GLuint tex8 = loadBMP("Resources/Textures/ufo.bmp");
+	GLuint tex9 = loadBMP("Resources/Textures/pickaxe.bmp");
+	GLuint tex10 = loadBMP("Resources/Textures/iron.bmp");
+	GLuint tex11 = loadBMP("Resources/Textures/fuel.bmp");
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -81,6 +112,21 @@ int main()
 	textures8.push_back(Texture());
 	textures8[0].id = tex8;
 	textures8[0].type = "texture_diffuse";
+
+	std::vector<Texture> textures9;
+	textures9.push_back(Texture());
+	textures9[0].id = tex9;
+	textures9[0].type = "texture_diffuse";
+
+	std::vector<Texture> textures10;
+	textures10.push_back(Texture());
+	textures10[0].id = tex10;
+	textures10[0].type = "texture_diffuse";
+
+	std::vector<Texture> textures11;
+	textures11.push_back(Texture());
+	textures11[0].id = tex11;
+	textures11[0].type = "texture_diffuse";
 	// Create Obj files - easier :)
 	// we can add here our textures :)
 	MeshLoaderObj loader;
@@ -89,12 +135,16 @@ int main()
 	Mesh planet2 = loader.loadObj("Resources/Models/planet.obj", textures2);
 	Mesh planet3 = loader.loadObj("Resources/Models/planet.obj", textures4);
 	Mesh planet4 = loader.loadObj("Resources/Models/sphere.obj", textures5);
-	Mesh asteroid = loader.loadObj("Resources/Models/planet3.obj", textures2);
+	Mesh asteroid = loader.loadObj("Resources/Models/asteroid.obj", textures2);
 	Mesh ship = loader.loadObj("Resources/Models/ship.obj", textures3);
-	Mesh plane = loader.loadObj("Resources/Models/plane1.obj", textures5);
-	Mesh mountain = loader.loadObj("Resources/Models/everest.obj", textures7);
-	Mesh water = loader.loadObj("Resources/Models/plane1.obj", textures6);
+	Mesh terrain = loader.loadObj("Resources/Models/terrain.obj", textures5);
+	Mesh mountain = loader.loadObj("Resources/Models/mountain.obj", textures7);
+	Mesh water = loader.loadObj("Resources/Models/terrain.obj", textures6);
 	Mesh ufo = loader.loadObj("Resources/Models/ufo.obj", textures8);
+	Mesh pickaxe = loader.loadObj("Resources/Models/pickaxe.obj", textures9);
+	Mesh rock = loader.loadObj("Resources/Models/rock.obj", textures10);
+	Mesh bucket = loader.loadObj("Resources/Models/bucket.obj", textures10);
+	Mesh fuel = loader.loadObj("Resources/Models/terrain.obj", textures11);
 
 	//check if we close the window or press the escape button
 	while (!window.isPressed(GLFW_KEY_ESCAPE) &&
@@ -106,6 +156,7 @@ int main()
 		lastFrame = currentFrame;
 
 		processKeyboardInput();
+		nextLevel();
 
 		//test mouse input
 		if (window.isMousePressed(GLFW_MOUSE_BUTTON_LEFT))
@@ -216,7 +267,7 @@ int main()
 			cutscene = false;
 		}
 		//uncomment to skip cutscene
-		cutscene = false;
+		//cutscene = false;
 		}
 		if (cutscene == false) {
 
@@ -229,18 +280,26 @@ int main()
 			glUniformMatrix4fv(MatrixID2, 1, GL_FALSE, &MVP[0][0]);
 			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 
-			plane.draw(shader);
+			terrain.draw(shader);
 			//ship
 			ModelMatrix = glm::mat4(1.0);
-			ModelMatrix = glm::translate(ModelMatrix, glm::vec3(0.0f, -15.0f, -15.0f));
+			ModelMatrix = glm::translate(ModelMatrix, shipPos2);
 			ModelMatrix = glm::scale(ModelMatrix, glm::vec3(20.0f, 20.0f, 20.0f));
 			ModelMatrix = glm::rotate(ModelMatrix, 45.0f, glm::vec3(1.0, 1.0, 1.0));
+			if (isShipFix)
+			{
+			ModelMatrix = glm::rotate(ModelMatrix, -45.0f, glm::vec3(1.0, 1.0, 1.0));
+			ModelMatrix = glm::rotate(ModelMatrix, 180.0f, glm::vec3(0.0, 1.0, 0.0));
+			ModelMatrix = glm::rotate(ModelMatrix, -8.0f, glm::vec3(1.0, 0.0, 0.0));
+
+			}
 
 			MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 			glUniformMatrix4fv(MatrixID2, 1, GL_FALSE, &MVP[0][0]);
 			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 
 			ship.draw(shader);
+			
 		
 			//planet
 			ModelMatrix = glm::mat4(1.0);
@@ -276,17 +335,114 @@ int main()
 			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 
 			ufo.draw(shader);
-			//animation
-			if (lr) {
+			//ufo animation
+			if (ufo_lr) {
 				ufoPos.x -= 0.4;
 				if (ufoPos.x < -2500.0f)
-					lr = false;
+					ufo_lr = false;
 			}
-			if (!lr){
+			if (!ufo_lr){
 				ufoPos.x += 0.4;
 				if (ufoPos.x > 2500.0f)
-					lr = true;
+					ufo_lr = true;
 			}
+
+			// pickaxe
+			if(isPickaxe){
+			ModelMatrix = glm::mat4(1.0);
+			ModelMatrix = glm::translate(ModelMatrix, pickPos);
+			ModelMatrix = glm::scale(ModelMatrix, glm::vec3(2.0f, 2, 2));
+
+			MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+			glUniformMatrix4fv(MatrixID2, 1, GL_FALSE, &MVP[0][0]);
+			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+			pickaxe.draw(shader);
+			}
+			// rock
+			if (isRock) {
+				ModelMatrix = glm::mat4(1.0);
+				ModelMatrix = glm::translate(ModelMatrix, rockPos);
+				ModelMatrix = glm::scale(ModelMatrix, glm::vec3(100.0f, 100.0f, 100.0f));
+
+				MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+				glUniformMatrix4fv(MatrixID2, 1, GL_FALSE, &MVP[0][0]);
+				glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+				rock.draw(shader);
+			}
+			
+			// bucket
+			if (isBucket) {
+				bucketPos = rockPos;
+				bucketPos.x += 50;
+				bucketPos.y += 25;
+				bucketPos.z -= 100;
+
+				ModelMatrix = glm::mat4(1.0);
+				ModelMatrix = glm::translate(ModelMatrix, bucketPos);
+				ModelMatrix = glm::scale(ModelMatrix, glm::vec3(10.0f, 10.0f, 10.0f));
+
+				MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+				glUniformMatrix4fv(MatrixID2, 1, GL_FALSE, &MVP[0][0]);
+				glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+				bucket.draw(shader);
+			}
+			// pickaxe animation for mining, fixing
+			if (isPickaxe2) {
+				if (isShipFix)
+				{
+					pickPos = rockPos;
+					pickPos.y += 70;
+					pickPos.z -= 100;
+				}
+				else {
+					pickPos = shipPos2;
+					pickPos.x += 5;
+					pickPos.y += 15;
+					pickPos.z += 10;
+				}
+				
+				ModelMatrix = glm::mat4(1.0);
+				ModelMatrix = glm::translate(ModelMatrix, pickPos);
+				ModelMatrix = glm::scale(ModelMatrix, glm::vec3(3.0f, 3.0f, 3.0f));
+				ModelMatrix = glm::rotate(ModelMatrix, -90.0f, glm::vec3(0.0, 0.0, 1.0));
+			
+
+				if((int)lastFrame % 2 == 0) {
+				ModelMatrix = glm::rotate(ModelMatrix, 20.0f, glm::vec3(0.0, 1.0, 0.0));
+				counter++;
+				}
+				else {
+				ModelMatrix = glm::rotate(ModelMatrix, -20.0f, glm::vec3(0.0, 1.0, 0.0));
+				counter++;
+				}
+				if (isShipFix && counter > 6000)
+				{
+					isPickaxe2 = false;
+					isRock = false;
+					isBucket = true;
+					//level3 completed
+					level = true;
+
+				}
+				if (!isShipFix && counter > 6000) {
+					counter = 0;
+					isPickaxe2 = false;
+					isShipFix = true;
+					//level2 completed
+					level = true;
+
+				}
+				MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+				glUniformMatrix4fv(MatrixID2, 1, GL_FALSE, &MVP[0][0]);
+				glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+				pickaxe.draw(shader);
+				
+			}
+
+			
 			//water
 
 			shader2.use();
@@ -306,6 +462,36 @@ int main()
 
 			water.draw(shader2);
 
+			//fuel
+			if(isFuel){
+			fuelPos = rockPos;
+			fuelPos.x += 650;
+			fuelPos.y += 50;
+			fuelPos.z += 750;
+
+			ModelMatrix = glm::mat4(1.0);
+			ModelMatrix = glm::translate(ModelMatrix, fuelPos);
+
+			MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+			glUniformMatrix4fv(MatrixID2, 1, GL_FALSE, &MVP[0][0]);
+			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+			fuel.draw(shader2);
+			}
+			// calculate distances between player and objects
+			distance_ship = sqrt(((camera.getCameraPosition().x - shipPos2.x) * (camera.getCameraPosition().x - shipPos2.x)) + ((camera.getCameraPosition().y - shipPos2.y) * (camera.getCameraPosition().y - shipPos2.y)) + ((camera.getCameraPosition().z - shipPos2.z) * (camera.getCameraPosition().z - shipPos2.z)));
+			distance_pkaxe = sqrt(((camera.getCameraPosition().x - pickPos.x) * (camera.getCameraPosition().x - pickPos.x)) + ((camera.getCameraPosition().y - pickPos.y) * (camera.getCameraPosition().y - pickPos.y)) + ((camera.getCameraPosition().z - pickPos.z) * (camera.getCameraPosition().z - pickPos.z)));
+			distance_rock = sqrt(((camera.getCameraPosition().x - rockPos.x) * (camera.getCameraPosition().x - rockPos.x)) + ((camera.getCameraPosition().y - rockPos.y) * (camera.getCameraPosition().y - rockPos.y)) + ((camera.getCameraPosition().z - rockPos.z) * (camera.getCameraPosition().z - rockPos.z)));
+			distance_bucket = sqrt(((camera.getCameraPosition().x - bucketPos.x) * (camera.getCameraPosition().x - bucketPos.x)) + ((camera.getCameraPosition().y - bucketPos.y) * (camera.getCameraPosition().y - bucketPos.y)) + ((camera.getCameraPosition().z - bucketPos.z) * (camera.getCameraPosition().z - bucketPos.z)));
+			distance_fuel = sqrt(((camera.getCameraPosition().x - fuelPos.x) * (camera.getCameraPosition().x - fuelPos.x)) + ((camera.getCameraPosition().y - fuelPos.y) * (camera.getCameraPosition().y - fuelPos.y)) + ((camera.getCameraPosition().z - fuelPos.z) * (camera.getCameraPosition().z - fuelPos.z)));
+
+			//fly home, end scene
+			if (endscene)
+			{
+				camera.reset();
+				shipPos2.y += 0.1;
+				shipPos2.z -= 0.1;
+			}
 
 		}
 		window.update();
@@ -313,11 +499,26 @@ int main()
 
 }
 
+void nextLevel() {
+	if(!cutscene){
+	if (isPickaxe)
+		std::cout << "You've crashed your spaceship, find tool to fix it. Press P to pickup item" << std::endl;
+	if (!isPickaxe && !isShipFix)
+		std::cout << "You find your tool, use it to fix your spaceship, Press Q for repair" << std::endl;
+	if (!isPickaxe && isShipFix && isRock)
+		std::cout << "Your ship is repaired but it still needs fuel, mine minerals to create bucket, Press Q to mine" << std::endl;
+	if (!isPickaxe && isShipFix && !isRock && isBucket && isFuel)
+		std::cout << "Here's your bucket, use it to collect fuel. Press P to pickup and collect" << std::endl;
+	if (!isPickaxe && isShipFix && !isRock && !isBucket && !isFuel && !refill)
+		std::cout << "Fuel collected, go to your spaceshipand refill it.Press Q to refill" << std::endl;
+	if (!isPickaxe && isShipFix && !isRock && !isBucket && !isFuel && refill)
+		std::cout << "You're ready to go home! Press space to fly home" << std::endl;}
+}
 void processKeyboardInput()
 {
 	float cameraSpeed = 60 * deltaTime;
 
-	if(cutscene == false){
+	if (!cutscene && !endscene) {
 
 	//translation
 	if (window.isPressed(GLFW_KEY_W)){
@@ -353,7 +554,48 @@ void processKeyboardInput()
 		camera.rotateOx(-cameraSpeed);
 		camera.keyboardMoveDown(cameraSpeed);
 	}
-	}
+	//collect items
+	if (window.isPressed(GLFW_KEY_P)) {
+		if (distance_pkaxe < 50) {
+			isPickaxe = false;
+			//level1 completed
+			level =true;
+		}
+		if (distance_bucket < 50) {
+			isBucket = false;
+		}
+		if (distance_fuel < 400 && !isBucket) {
+			isFuel = false;
+			//level4 completed
+			level = true;
 
+		}
+	}
+	// mine rock, fix, refuel ship
+	if (window.isPressed(GLFW_KEY_Q)) {
+		// mine rock
+		if (distance_rock < 250 && !isPickaxe && isShipFix) {
+			isPickaxe2 = true;
+		}
+		// fix ship
+		if (distance_ship < 100 && !isPickaxe && !isShipFix) {
+			isPickaxe2 = true;
+		}
+		// refuel ship
+		if (distance_ship < 100 && !isFuel) {
+			refill = true;
+			//level5 completed
+			level = true;
+
+		}
+	}	
+	}
+	if (window.isPressed(GLFW_KEY_SPACE)) {
+		// fly Home
+		if (refill) {
+			endscene = true;
+
+		}
+	}
 	
 }
