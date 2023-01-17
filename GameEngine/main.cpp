@@ -6,10 +6,16 @@
 #include "Model Loading\meshLoaderObj.h"
 #include <string>
 #include <iostream>
+#include"imgui/imgui.h"
+#include"imgui/imgui_impl_glfw.h"
+#include"imgui/imgui_impl_opengl3.h"
+#define STBI_ASSERT(x)
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image/stb_image.h"
+
 
 
 void processKeyboardInput ();
-void nextLevel();
 
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
@@ -34,8 +40,10 @@ bool refill = false;
 bool fly_home = false;
 bool endscene = false;
 bool level = false;
-
+bool skyboxOn = true;
+bool skyboxOn2 = false;
 Window window("Game Engine", 800, 800);
+
 Camera camera;
 glm::vec3 lightColor = glm::vec3(1.0f);
 glm::vec3 lightPos = glm::vec3(-1800.0f, 1000.0f, -100.0f);
@@ -48,8 +56,119 @@ glm::vec3 rockPos = glm::vec3(-500.0f, -85.0f, 1100.0f);
 glm::vec3 bucketPos;
 glm::vec3 fuelPos;
 
+
+//function for loading skybox texture
+unsigned int loadCubemap(std::vector<std::string> faces)
+{
+	unsigned int textureID;
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+	int width, height, nrChannels;
+	for (unsigned int i = 0; i < faces.size(); i++)
+	{
+		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+		if (data)
+		{
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+				0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+			);
+			stbi_image_free(data);
+		}
+		else
+		{
+			std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
+			stbi_image_free(data);
+		}
+	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	return textureID;
+}
+
+//skybox vertices
+//float skyboxVertices[] = {
+//	//front
+//	-1.0f,	-1.0f,	1.0f,
+//	 1.0f,	-1.0f,  1.0f,
+//	-1.0f,	 1.0f,  1.0f,
+//	 1.0f,   1.0f,  1.0f,
+//	//back
+//	-1.0f,  -1.0f, -1.0f,
+//	 1.0f,  -1.0f, -1.0f,
+//	-1.0f,   1.0f, -1.0f,
+//	 1.0f,   1.0f, -1.0f
+//};
+//
+//
+//unsigned int skyboxIndices[] = {
+//	0, 1, 2,
+//	1, 3, 2,
+//	2, 3, 7,
+//	2, 7, 6,
+//	1, 7, 3,
+//	1, 5, 7,
+//	6, 7, 4,
+//	7, 5, 4,
+//	0, 4, 1,
+//	1, 4, 5,
+//	2, 6, 4,
+//	0, 2, 4
+//};
+float skyboxVertices[] = {
+	// positions          
+	-1.0f,  1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	-1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f
+};
+
+
+
 int main()
 {
+
 	glClearColor(0.0f, 0.0f, 0.09f, 1.0f);
 
 
@@ -57,6 +176,7 @@ int main()
 	Shader shader("Shaders/vertex_shader.glsl", "Shaders/fragment_shader.glsl");
 	Shader sunShader("Shaders/sun_vertex_shader.glsl", "Shaders/sun_fragment_shader.glsl");
 	Shader shader2("Shaders/water_vertex_shader.glsl", "Shaders/water_fragment_shader.glsl");
+	Shader skyboxShader("Shaders/skybox_vertex_shader.glsl", "Shaders/skybox_fragment_shader.glsl");
 
 	//Textures
 	GLuint tex = loadBMP("Resources/Textures/rock.bmp");
@@ -70,6 +190,18 @@ int main()
 	GLuint tex9 = loadBMP("Resources/Textures/pickaxe.bmp");
 	GLuint tex10 = loadBMP("Resources/Textures/iron.bmp");
 	GLuint tex11 = loadBMP("Resources/Textures/fuel.bmp");
+	GLuint tex12 = loadBMP("Resources/Textures/space.bmp");
+
+	std::vector<std::string> faces = {
+		"Resources/Textures/Skybox/right.png",
+		"Resources/Textures/Skybox/left.png",
+		"Resources/Textures/Skybox/top.png",
+		"Resources/Textures/Skybox/bottom.png",
+		"Resources/Textures/Skybox/front.png",
+		"Resources/Textures/Skybox/back.png"
+	};
+
+	unsigned int cubemapTexture = loadCubemap(faces);
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -127,6 +259,11 @@ int main()
 	textures11.push_back(Texture());
 	textures11[0].id = tex11;
 	textures11[0].type = "texture_diffuse";
+
+	std::vector<Texture> textures12;
+	textures12.push_back(Texture());
+	textures12[0].id = tex12;
+	textures12[0].type = "texture_diffuse";
 	// Create Obj files - easier :)
 	// we can add here our textures :)
 	MeshLoaderObj loader;
@@ -145,25 +282,113 @@ int main()
 	Mesh rock = loader.loadObj("Resources/Models/rock.obj", textures10);
 	Mesh bucket = loader.loadObj("Resources/Models/bucket.obj", textures10);
 	Mesh fuel = loader.loadObj("Resources/Models/terrain.obj", textures11);
+	Mesh cube = loader.loadObj("Resources/Models/cube.obj", textures12);
+
+	//imgui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);
+	ImGui_ImplOpenGL3_Init("#version 330");
+
 
 	//check if we close the window or press the escape button
 	while (!window.isPressed(GLFW_KEY_ESCAPE) &&
 		glfwWindowShouldClose(window.getWindow()) == 0)
 	{
+		
+		
 		window.clear();
 		float currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
+		
+		
 		processKeyboardInput();
-		nextLevel();
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
 
-		//test mouse input
-		if (window.isMousePressed(GLFW_MOUSE_BUTTON_LEFT))
+		
+		
+
+		////test mouse input
+		//if (window.isMousePressed(GLFW_MOUSE_BUTTON_LEFT))
+		//{
+		//	std::cout << "Pressing mouse button" << std::endl;
+		//}
+
+		if (skyboxOn)
 		{
-			std::cout << "Pressing mouse button" << std::endl;
+			//Drawing skybox
+
+			glDepthMask(GL_FALSE);
+			skyboxShader.use();
+			glm::mat4 skyboxViewMatrix = glm::mat4(glm::mat3(glm::lookAt(camera.getCameraPosition(), camera.getCameraPosition() + camera.getCameraViewDirection(), camera.getCameraUp())));
+			glm::mat4 skyboxProjectionMatrix = glm::perspective(90.0f, window.getWidth() * 1.0f / window.getHeight(), 0.1f, 10000.0f);
+			GLuint vbo, vao, ibo;
+			//glGenVertexArrays(1, &vao);
+			//glGenBuffers(1, &vbo);
+			//glGenBuffers(1, &ibo);
+
+			//glBindVertexArray(vao);
+
+			//glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			//glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+
+			//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+			//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), skyboxIndices, GL_STATIC_DRAW);
+
+			////set attribute pointers
+			//glVertexAttribPointer(
+			//	0,                  // attribute 0, must match the layout in the shader.
+			//	3,                  // size of each attribute
+			//	GL_FLOAT,           // type
+			//	GL_FALSE,           // normalized?
+			//	3 * sizeof(float),                  // stride
+			//	(void*)0            // array buffer offset
+			//);
+			//glEnableVertexAttribArray(0);
+
+			glGenVertexArrays(1, &vao);
+			glGenBuffers(1, &vbo);
+
+			glBindVertexArray(vao);
+
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+
+			// 1rst attribute buffer : vertices position
+			glVertexAttribPointer(
+				0,                  // attribute 0, must match the layout in the shader.
+				3,                  // size of each attribute
+				GL_FLOAT,           // type
+				GL_FALSE,           // normalized?
+				3 * sizeof(float),     // stride
+				0            // array buffer offset
+			);
+			glEnableVertexAttribArray(0);
+
+			unsigned int skyboxViewLoc = glGetUniformLocation(skyboxShader.getId(), "view");
+			glUniformMatrix4fv(skyboxViewLoc, 1, GL_FALSE, glm::value_ptr(skyboxViewMatrix));
+
+			unsigned int skyboxProjectionLoc = glGetUniformLocation(skyboxShader.getId(), "projection");
+			glUniformMatrix4fv(skyboxViewLoc, 1, GL_FALSE, glm::value_ptr(skyboxProjectionMatrix));
+
+			glBindVertexArray(vao);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+			//unsigned int skyboxTexLoc = glGetUniformLocation(skyboxShader.getId(), "skybox");
+			//glUniform1i(skyboxTexLoc, 0);
+			//glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+			glDrawArrays(GL_QUADS, 0, 24);
+			//glActiveTexture(GL_TEXTURE0);
+			glDepthMask(GL_TRUE);
+
 		}
-		 //// Code for the light ////
+
+		 //// Code for the light ////`
 
 		sunShader.use();
 
@@ -441,8 +666,18 @@ int main()
 				pickaxe.draw(shader);
 				
 			}
+			// cube for skybox
+			if(skyboxOn2){
+			ModelMatrix = glm::mat4(1.0);
+			ModelMatrix = glm::translate(ModelMatrix, glm::vec3(0.0f, -2000.0f, -4000.0f));
+			ModelMatrix = glm::scale(ModelMatrix, glm::vec3(3000.0f, 3000.0f, 3000.0f));
 
-			
+			MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+			glUniformMatrix4fv(MatrixID2, 1, GL_FALSE, &MVP[0][0]);
+			glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+			cube.draw(shader);
+			}
 			//water
 
 			shader2.use();
@@ -494,26 +729,60 @@ int main()
 			}
 
 		}
+
+		std::string currentTaskText;		 
+			if (!cutscene) {
+				if (isPickaxe) {
+					currentTaskText = "You've crashed your spaceship, find tool to fix it. Press P to pickup item";
+				}
+				if (!isPickaxe && !isShipFix) {
+					currentTaskText = "You found your tool, use it to fix your spaceship. Press Q for repair";
+				}
+				if (!isPickaxe && isShipFix && isRock) {
+					currentTaskText = "Your ship is repaired but it still needs fuel, mine minerals to create bucket. Press Q to mine";
+				}
+				if (!isPickaxe && isShipFix && !isRock && isFuel) {
+					currentTaskText = "Here's your bucket, use it to collect fuel. Press P to pickup and collect";
+				}
+				if (!isPickaxe && isShipFix && !isRock && !isBucket && !isFuel && !refill) {
+					currentTaskText = "Fuel collected, go to your spaceship  and refill it. Press Q to refill it";
+				}
+				if (!isPickaxe && isShipFix && !isRock && !isBucket && !isFuel && refill) {
+					currentTaskText = "You're ready to go home! Press space to fly home";
+				}
+			}
+		
+
+		
+
+		
+
+		ImGui::Begin("Tasks");
+		ImGui::Text(currentTaskText.c_str());
+		
+		if (ImGui::Button("Skybox On / Off"))
+		{
+			skyboxOn = !skyboxOn;
+			skyboxOn2 = !skyboxOn2;
+		}
+
+		
+		ImGui::End();
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+
 		window.update();
+	
 	}
 
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
+		ImGui::DestroyContext();
+	
 }
 
-void nextLevel() {
-	if(!cutscene){
-	if (isPickaxe)
-		std::cout << "You've crashed your spaceship, find tool to fix it. Press P to pickup item" << std::endl;
-	if (!isPickaxe && !isShipFix)
-		std::cout << "You find your tool, use it to fix your spaceship, Press Q for repair" << std::endl;
-	if (!isPickaxe && isShipFix && isRock)
-		std::cout << "Your ship is repaired but it still needs fuel, mine minerals to create bucket, Press Q to mine" << std::endl;
-	if (!isPickaxe && isShipFix && !isRock && isBucket && isFuel)
-		std::cout << "Here's your bucket, use it to collect fuel. Press P to pickup and collect" << std::endl;
-	if (!isPickaxe && isShipFix && !isRock && !isBucket && !isFuel && !refill)
-		std::cout << "Fuel collected, go to your spaceshipand refill it.Press Q to refill" << std::endl;
-	if (!isPickaxe && isShipFix && !isRock && !isBucket && !isFuel && refill)
-		std::cout << "You're ready to go home! Press space to fly home" << std::endl;}
-}
+
 void processKeyboardInput()
 {
 	float cameraSpeed = 60 * deltaTime;
