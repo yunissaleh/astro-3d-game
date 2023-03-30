@@ -40,7 +40,6 @@ bool refill = false;
 bool fly_home = false;
 bool endscene = false;
 bool level = false;
-bool skyboxOn = true;
 bool skyboxOn2 = false;
 Window window("Game Engine", 800, 800);
 
@@ -56,116 +55,6 @@ glm::vec3 rockPos = glm::vec3(-500.0f, -85.0f, 1100.0f);
 glm::vec3 bucketPos;
 glm::vec3 fuelPos;
 
-
-//function for loading skybox texture
-unsigned int loadCubemap(std::vector<std::string> faces)
-{
-	unsigned int textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
-	int width, height, nrChannels;
-	for (unsigned int i = 0; i < faces.size(); i++)
-	{
-		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
-		if (data)
-		{
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-				0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
-			);
-			stbi_image_free(data);
-		}
-		else
-		{
-			std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
-			stbi_image_free(data);
-		}
-	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	return textureID;
-}
-
-//skybox vertices
-//float skyboxVertices[] = {
-//	//front
-//	-1.0f,	-1.0f,	1.0f,
-//	 1.0f,	-1.0f,  1.0f,
-//	-1.0f,	 1.0f,  1.0f,
-//	 1.0f,   1.0f,  1.0f,
-//	//back
-//	-1.0f,  -1.0f, -1.0f,
-//	 1.0f,  -1.0f, -1.0f,
-//	-1.0f,   1.0f, -1.0f,
-//	 1.0f,   1.0f, -1.0f
-//};
-//
-//
-//unsigned int skyboxIndices[] = {
-//	0, 1, 2,
-//	1, 3, 2,
-//	2, 3, 7,
-//	2, 7, 6,
-//	1, 7, 3,
-//	1, 5, 7,
-//	6, 7, 4,
-//	7, 5, 4,
-//	0, 4, 1,
-//	1, 4, 5,
-//	2, 6, 4,
-//	0, 2, 4
-//};
-float skyboxVertices[] = {
-	// positions          
-	-1.0f,  1.0f, -1.0f,
-	-1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-	 1.0f,  1.0f, -1.0f,
-	-1.0f,  1.0f, -1.0f,
-
-	-1.0f, -1.0f,  1.0f,
-	-1.0f, -1.0f, -1.0f,
-	-1.0f,  1.0f, -1.0f,
-	-1.0f,  1.0f, -1.0f,
-	-1.0f,  1.0f,  1.0f,
-	-1.0f, -1.0f,  1.0f,
-
-	 1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-
-	-1.0f, -1.0f,  1.0f,
-	-1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f, -1.0f,  1.0f,
-	-1.0f, -1.0f,  1.0f,
-
-	-1.0f,  1.0f, -1.0f,
-	 1.0f,  1.0f, -1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	-1.0f,  1.0f,  1.0f,
-	-1.0f,  1.0f, -1.0f,
-
-	-1.0f, -1.0f, -1.0f,
-	-1.0f, -1.0f,  1.0f,
-	 1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-	-1.0f, -1.0f,  1.0f,
-	 1.0f, -1.0f,  1.0f
-};
-
-
-
 int main()
 {
 
@@ -176,7 +65,6 @@ int main()
 	Shader shader("Shaders/vertex_shader.glsl", "Shaders/fragment_shader.glsl");
 	Shader sunShader("Shaders/sun_vertex_shader.glsl", "Shaders/sun_fragment_shader.glsl");
 	Shader shader2("Shaders/water_vertex_shader.glsl", "Shaders/water_fragment_shader.glsl");
-	Shader skyboxShader("Shaders/skybox_vertex_shader.glsl", "Shaders/skybox_fragment_shader.glsl");
 
 	//Textures
 	GLuint tex = loadBMP("Resources/Textures/rock.bmp");
@@ -191,19 +79,6 @@ int main()
 	GLuint tex10 = loadBMP("Resources/Textures/iron.bmp");
 	GLuint tex11 = loadBMP("Resources/Textures/fuel.bmp");
 	GLuint tex12 = loadBMP("Resources/Textures/space.bmp");
-
-	std::vector<std::string> faces = {
-		"Resources/Textures/Skybox/right.png",
-		"Resources/Textures/Skybox/left.png",
-		"Resources/Textures/Skybox/top.png",
-		"Resources/Textures/Skybox/bottom.png",
-		"Resources/Textures/Skybox/front.png",
-		"Resources/Textures/Skybox/back.png"
-	};
-
-	unsigned int cubemapTexture = loadCubemap(faces);
-
-	glEnable(GL_DEPTH_TEST);
 
 	std::vector<Texture> textures;
 	textures.push_back(Texture());
@@ -310,83 +185,6 @@ int main()
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-
-		
-		
-
-		////test mouse input
-		//if (window.isMousePressed(GLFW_MOUSE_BUTTON_LEFT))
-		//{
-		//	std::cout << "Pressing mouse button" << std::endl;
-		//}
-
-		if (skyboxOn)
-		{
-			//Drawing skybox
-
-			glDepthMask(GL_FALSE);
-			skyboxShader.use();
-			glm::mat4 skyboxViewMatrix = glm::mat4(glm::mat3(glm::lookAt(camera.getCameraPosition(), camera.getCameraPosition() + camera.getCameraViewDirection(), camera.getCameraUp())));
-			glm::mat4 skyboxProjectionMatrix = glm::perspective(90.0f, window.getWidth() * 1.0f / window.getHeight(), 0.1f, 10000.0f);
-			GLuint vbo, vao, ibo;
-			//glGenVertexArrays(1, &vao);
-			//glGenBuffers(1, &vbo);
-			//glGenBuffers(1, &ibo);
-
-			//glBindVertexArray(vao);
-
-			//glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			//glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
-
-			//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-			//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), skyboxIndices, GL_STATIC_DRAW);
-
-			////set attribute pointers
-			//glVertexAttribPointer(
-			//	0,                  // attribute 0, must match the layout in the shader.
-			//	3,                  // size of each attribute
-			//	GL_FLOAT,           // type
-			//	GL_FALSE,           // normalized?
-			//	3 * sizeof(float),                  // stride
-			//	(void*)0            // array buffer offset
-			//);
-			//glEnableVertexAttribArray(0);
-
-			glGenVertexArrays(1, &vao);
-			glGenBuffers(1, &vbo);
-
-			glBindVertexArray(vao);
-
-			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
-
-			// 1rst attribute buffer : vertices position
-			glVertexAttribPointer(
-				0,                  // attribute 0, must match the layout in the shader.
-				3,                  // size of each attribute
-				GL_FLOAT,           // type
-				GL_FALSE,           // normalized?
-				3 * sizeof(float),     // stride
-				0            // array buffer offset
-			);
-			glEnableVertexAttribArray(0);
-
-			unsigned int skyboxViewLoc = glGetUniformLocation(skyboxShader.getId(), "view");
-			glUniformMatrix4fv(skyboxViewLoc, 1, GL_FALSE, glm::value_ptr(skyboxViewMatrix));
-
-			unsigned int skyboxProjectionLoc = glGetUniformLocation(skyboxShader.getId(), "projection");
-			glUniformMatrix4fv(skyboxViewLoc, 1, GL_FALSE, glm::value_ptr(skyboxProjectionMatrix));
-
-			glBindVertexArray(vao);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-			//unsigned int skyboxTexLoc = glGetUniformLocation(skyboxShader.getId(), "skybox");
-			//glUniform1i(skyboxTexLoc, 0);
-			//glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-			glDrawArrays(GL_QUADS, 0, 24);
-			//glActiveTexture(GL_TEXTURE0);
-			glDepthMask(GL_TRUE);
-
-		}
 
 		 //// Code for the light ////`
 
@@ -762,7 +560,6 @@ int main()
 		
 		if (ImGui::Button("Skybox On / Off"))
 		{
-			skyboxOn = !skyboxOn;
 			skyboxOn2 = !skyboxOn2;
 		}
 
