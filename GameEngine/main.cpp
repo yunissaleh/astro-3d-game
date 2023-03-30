@@ -26,7 +26,6 @@ float distance_bucket;
 float distance_fuel;
 
 int counter = 0;
-int taskNum = 0;
 
 bool cutscene = true;
 bool ufo_lr = true;
@@ -39,7 +38,6 @@ bool isShipFix = false;
 bool refill = false;
 bool fly_home = false;
 bool endscene = false;
-bool level = false;
 bool skyboxOn2 = false;
 Window window("Game Engine", 800, 800);
 
@@ -55,6 +53,8 @@ glm::vec3 rockPos = glm::vec3(-500.0f, -85.0f, 1100.0f);
 glm::vec3 bucketPos;
 glm::vec3 fuelPos;
 
+
+
 int main()
 {
 
@@ -65,6 +65,7 @@ int main()
 	Shader shader("Shaders/vertex_shader.glsl", "Shaders/fragment_shader.glsl");
 	Shader sunShader("Shaders/sun_vertex_shader.glsl", "Shaders/sun_fragment_shader.glsl");
 	Shader shader2("Shaders/water_vertex_shader.glsl", "Shaders/water_fragment_shader.glsl");
+	Shader skyboxShader("Shaders/skybox_vertex_shader.glsl", "Shaders/skybox_fragment_shader.glsl");
 
 	//Textures
 	GLuint tex = loadBMP("Resources/Textures/rock.bmp");
@@ -79,6 +80,9 @@ int main()
 	GLuint tex10 = loadBMP("Resources/Textures/iron.bmp");
 	GLuint tex11 = loadBMP("Resources/Textures/fuel.bmp");
 	GLuint tex12 = loadBMP("Resources/Textures/space.bmp");
+
+
+	glEnable(GL_DEPTH_TEST);
 
 	std::vector<Texture> textures;
 	textures.push_back(Texture());
@@ -446,16 +450,14 @@ int main()
 					isPickaxe2 = false;
 					isRock = false;
 					isBucket = true;
-					//level3 completed
-					level = true;
+					
 
 				}
 				if (!isShipFix && counter > 6000) {
 					counter = 0;
 					isPickaxe2 = false;
 					isShipFix = true;
-					//level2 completed
-					level = true;
+			
 
 				}
 				MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
@@ -531,29 +533,24 @@ int main()
 		std::string currentTaskText;		 
 			if (!cutscene) {
 				if (isPickaxe) {
-					currentTaskText = "You've crashed your spaceship, find tool to fix it. Press P to pickup item";
+					currentTaskText = "You've crashed your spaceship, find tool to fix it.\nPress P to pickup item";
 				}
 				if (!isPickaxe && !isShipFix) {
-					currentTaskText = "You found your tool, use it to fix your spaceship. Press Q for repair";
+					currentTaskText = "You found your tool, use it to fix your spaceship.\nPress Q for repair";
 				}
 				if (!isPickaxe && isShipFix && isRock) {
-					currentTaskText = "Your ship is repaired but it still needs fuel, mine minerals to create bucket. Press Q to mine";
+					currentTaskText = "Your ship is repaired but it still needs fuel, mine minerals to create bucket.\nPress Q to mine";
 				}
 				if (!isPickaxe && isShipFix && !isRock && isFuel) {
-					currentTaskText = "Here's your bucket, use it to collect fuel. Press P to pickup and collect";
+					currentTaskText = "Here's your bucket, use it to collect fuel.\nPress P to pickup and collect";
 				}
 				if (!isPickaxe && isShipFix && !isRock && !isBucket && !isFuel && !refill) {
-					currentTaskText = "Fuel collected, go to your spaceship  and refill it. Press Q to refill it";
+					currentTaskText = "Fuel collected, go to your spaceship and refill it.\nPress Q to refill";
 				}
 				if (!isPickaxe && isShipFix && !isRock && !isBucket && !isFuel && refill) {
 					currentTaskText = "You're ready to go home! Press space to fly home";
 				}
 			}
-		
-
-		
-
-		
 
 		ImGui::Begin("Tasks");
 		ImGui::Text(currentTaskText.c_str());
@@ -624,16 +621,14 @@ void processKeyboardInput()
 	if (window.isPressed(GLFW_KEY_P)) {
 		if (distance_pkaxe < 50) {
 			isPickaxe = false;
-			//level1 completed
-			level =true;
+			
 		}
 		if (distance_bucket < 50) {
 			isBucket = false;
 		}
 		if (distance_fuel < 400 && !isBucket) {
 			isFuel = false;
-			//level4 completed
-			level = true;
+		
 
 		}
 	}
@@ -650,8 +645,7 @@ void processKeyboardInput()
 		// refuel ship
 		if (distance_ship < 100 && !isFuel) {
 			refill = true;
-			//level5 completed
-			level = true;
+			
 
 		}
 	}	
