@@ -1,5 +1,5 @@
 # astro-3d-game
-Fix your crashed spaceship! a small 3d game using a simple game engine created with OpenGL &amp; C++
+Fix your crashed spaceship! a small 3d game using a simple game engine created with OpenGL, GLSL & C++
 
 # GAMEPLAY
 - The game starts with a cutscene following our ship before the crash.
